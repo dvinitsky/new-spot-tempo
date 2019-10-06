@@ -11,16 +11,14 @@ export const getMatchingTracks = (bpm, originPlaylistTracks) => {
   console.log(mathcingTracks);
 };
 
-export const getAccessTokenAndExpirationSeconds = () => {
+export const getUrlParams = () => {
   if (
-    window.location.href.match(/access_token=([^&]*)/) !== null &&
-    window.location.href.match(/expires_in=([^&]*)/) !== null
+    window.location.href.match(/code=([^&]*)/) !== null &&
+    window.location.href.match(/state=([^&]*)/) !== null
   ) {
     return {
-      accessToken: window.location.href
-        .split("access_token=")[1]
-        .split("&token_type")[0],
-      expirationSeconds: window.location.href.split("expires_in=")[1]
+      code: window.location.href.split("code=")[1].split("&state")[0],
+      state: window.location.href.split("state=")[1]
     };
   }
   return {};

@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { getAccessTokenAndExpirationSeconds } from "../helpers/helpers";
+import {
+  getAccessTokenAndExpirationSeconds,
+  getUrlParams
+} from "../helpers/helpers";
 import Login from "./Login";
 import Search from "./Search";
+import { login } from "../services/serverCalls";
 
 const App = () => {
-  const [accessToken, setAccessToken] = useState();
+  // const [accessToken, setAccessToken] = useState();
 
   useEffect(() => {
-    const {
-      accessToken: at = "",
-      expirationSeconds = 0
-    } = getAccessTokenAndExpirationSeconds();
+    const loginHandler = async () => {
+      const { code, state } = getUrlParams();
+      if (code && state) {
+        const response = await login(code, state);
+        console.log(response);
+      }
+    };
 
-    if (at) {
-      setAccessToken(at);
-      window.setTimeout(() => setAccessToken(), expirationSeconds * 1000);
-    }
-  }, [setAccessToken]);
+    loginHandler();
+  });
 
-  return accessToken ? <Search accessToken={accessToken} /> : <Login />;
+  console.log("app");
+  // return accessToken ? <Search accessToken={accessToken} /> : <Login />;
+  return <Login />;
 };
+
 export default App;
