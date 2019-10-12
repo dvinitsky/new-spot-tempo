@@ -2,7 +2,6 @@ const express = require("express");
 const path = require("path");
 const PORT = process.env.PORT || 5000;
 const bodyParser = require("body-parser");
-const axios = require("axios");
 const querystring = require("querystring");
 const request = require("request");
 
@@ -25,6 +24,9 @@ const generateRandomString = length => {
 };
 
 const randomString = generateRandomString(16);
+let accessToken;
+let likedSongs;
+let headers;
 
 const app = express();
 app.use(bodyParser.json());
@@ -46,8 +48,12 @@ app.get("/auth", (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
+  if (accessToken) {
+    return res.status(200).send(accessToken);
+  }
+
   if (req.body.state !== randomString) {
-    res.status(500).send("State does not match");
+    return res.status(200).send({ mismatch: true });
   }
 
   const base64data = new Buffer.from(`${client_id}:${client_secret}`).toString(
@@ -64,16 +70,78 @@ app.post("/login", async (req, res) => {
       },
       headers: {
         Authorization: `Basic ${base64data}`
-      }
+      },
+      json: true
     },
     (error, response, body) => {
-      if (error) {
-        res.status(500).send("There has been an error");
+      accessToken = body.access_token;
+      refreshToken = body.refresh_token;
+      headers = { Authorization: `Bearer ${accessToken}` };
+
+      return res.status(200).send(accessToken);
+    }
+  );
+});
+
+app.post("/getSongs", (req, res) => {
+  res.status(200).send(likedSongs.slice(0, 100));
+});
+
+app.get("/likedSongs", (req, res) => {
+  request.get(
+    {
+      url: "https://api.spotify.com/v1/me/tracks?limit=50",
+      headers,
+      json: true
+    },
+    async (e, r, body) => {
+      if (e || !body.items) {
+        return res.status(500).send("There has been an error.");
       }
-      if (response.statusCode === 200) {
-        console.log(body);
-        res.status(200).send(body);
+
+      likedSongs = [];
+      likedSongs.push(...body.items.map(item => item.track));
+
+      const total = body.total;
+
+      for (let i = 50; i <= total; i += 50) {
+        request.get(
+          {
+            url: `https://api.spotify.com/v1/me/tracks?limit=50&offset=${i}`,
+            headers,
+            json: true
+          },
+          (e, r, body) => {
+            if (e || !body.items) {
+              return res.status(500).send("There has been an error.");
+            }
+
+            likedSongs.push(...body.items.map(item => item.track));
+
+            if (likedSongs.length >= total) {
+              res.sendStatus(200);
+            }
+          }
+        );
       }
+    }
+  );
+});
+
+app.get("/playlists", (req, res) => {
+  request.get(
+    {
+      url: "https://api.spotify.com/v1/me",
+      headers
+    },
+    (e, r, body) => {
+      request.get(
+        {
+          url: "https://api.spotify.com/v1/me/playlists",
+          headers
+        },
+        (e, r, body) => {}
+      );
     }
   );
 });

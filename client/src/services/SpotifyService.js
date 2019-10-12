@@ -7,93 +7,48 @@ export class SpotifyService {
     };
   }
 
-  getAllData = async () => {
-    this.userId = await this.getUserId();
-    const userPlaylists = await this.getUserPlaylists();
+  // getAllData = async () => {
 
-    const originPlaylistTracks = await this.getLikedSongs();
 
-    this.destinationPlaylistId = await this.getPlaylistId(
-      "SpotTempo Workout",
-      userPlaylists
-    );
-    const destinationPlaylistTracks = await this.getPlaylistTracks(
-      this.destinationPlaylistId
-    );
 
-    const originTrackIds = originPlaylistTracks
-      .map(track => track.id)
-      .join(",");
-    const destinationTrackIds = destinationPlaylistTracks
-      .map(track => track.id)
-      .join(",");
 
-    let originAudioFeatures = await this.getTempo(originTrackIds);
-    originAudioFeatures.forEach(
-      (item, index) =>
-        (originPlaylistTracks[index].tempo = Math.round(item.tempo))
-    );
 
-    let destinationAudioFeatures = [];
-    if (destinationTrackIds.length > 0) {
-      destinationAudioFeatures = await this.getTempo(destinationTrackIds);
-    }
+  //   this.destinationPlaylistId = await this.getPlaylistId(
+  //     "SpotTempo Workout",
+  //     userPlaylists
+  //   );
+  //   const destinationPlaylistTracks = await this.getPlaylistTracks(
+  //     this.destinationPlaylistId
+  //   );
 
-    destinationAudioFeatures.forEach(
-      (item, index) =>
-        (destinationPlaylistTracks[index].tempo = Math.round(item.tempo))
-    );
+  //   const originTrackIds = originPlaylistTracks
+  //     .map(track => track.id)
+  //     .join(",");
+  //   const destinationTrackIds = destinationPlaylistTracks
+  //     .map(track => track.id)
+  //     .join(",");
 
-    return {
-      originPlaylistTracks,
-      destinationPlaylistTracks
-    };
-  };
+  //   let originAudioFeatures = await this.getTempo(originTrackIds);
+  //   originAudioFeatures.forEach(
+  //     (item, index) =>
+  //       (originPlaylistTracks[index].tempo = Math.round(item.tempo))
+  //   );
 
-  getUserId = async () => {
-    try {
-      let response = await fetch("https://api.spotify.com/v1/me", {
-        headers: this.headers
-      });
-      if (response.ok) {
-        let user = await response.json();
-        return user.id;
-      }
-      throw new Error("Request failed!");
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  //   let destinationAudioFeatures = [];
+  //   if (destinationTrackIds.length > 0) {
+  //     destinationAudioFeatures = await this.getTempo(destinationTrackIds);
+  //   }
 
-  getUserPlaylists = async () => {
-    try {
-      let response = await fetch("https://api.spotify.com/v1/me/playlists", {
-        headers: this.headers
-      });
-      if (response.ok) {
-        const res = await response.json();
-        return res.items;
-      }
-      throw new Error("Request failed!");
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  //   destinationAudioFeatures.forEach(
+  //     (item, index) =>
+  //       (destinationPlaylistTracks[index].tempo = Math.round(item.tempo))
+  //   );
 
-  getLikedSongs = async () => {
-    try {
-      let response = await fetch("https://api.spotify.com/v1/me/tracks", {
-        headers: this.headers
-      });
-      if (response.ok) {
-        const res = await response.json();
-        return res.items.map(item => item.track);
-      }
-      throw new Error("Request failed!");
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  //   return {
+  //     originPlaylistTracks,
+  //     destinationPlaylistTracks
+  //   };
+  // };
 
   createPlaylist = async userId => {
     try {

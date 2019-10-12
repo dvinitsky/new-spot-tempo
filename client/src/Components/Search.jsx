@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { SongList } from "./SongList";
 import styled from "styled-components";
-import { SpotifyService } from "../services/SpotifyService";
 import { getMatchingTracks } from "../helpers/helpers";
+import Axios from "axios";
 
 const Wrapper = styled.div`
   display: flex;
@@ -31,47 +31,43 @@ const ListsContainer = styled.div`
   justify-content: center;
 `;
 
-const Search = ({ accessToken }) => {
-  const [originPlaylistTracks, setOriginPlaylistTracks] = useState([]);
+const Search = () => {
+  const [likedSongs, setLikedSongs] = useState([]);
   const [destinationPlaylistTracks, setDestinationPlaylistTracks] = useState(
     []
   );
   const [searchResults, setSearchResults] = useState([]);
-  const [Spotify, setSpotify] = useState();
   const [bpm, setBpm] = useState();
+  const [isLoading, setIsLoading] = useState();
 
   useEffect(() => {
-    const Spotify = new SpotifyService(accessToken);
+    const getLikedSongs = async () => {
+      setIsLoading(true);
+      await Axios.get("/likedSongs", {});
+      const firstBatch = await Axios.post("/getSongs", { limit: 100 });
+      setLikedSongs(firstBatch.data);
+      setIsLoading(false);
+    };
 
-    (async () => {
-      const allData = await Spotify.getAllData();
-
-      setOriginPlaylistTracks(allData.originPlaylistTracks);
-      setDestinationPlaylistTracks(allData.destinationPlaylistTracks);
-      setSearchResults(allData.originPlaylistTracks);
-    })();
-
-    setSpotify(Spotify);
-  }, [accessToken, setSpotify]);
+    getLikedSongs();
+  }, []);
 
   const handleSearch = () => {
     const newBpm = document.getElementById("searchbar").value;
     setBpm(newBpm);
-    setSearchResults(getMatchingTracks(newBpm, originPlaylistTracks));
+    setSearchResults(getMatchingTracks(newBpm, likedSongs));
   };
 
   const addSongToDestination = async song => {
     setDestinationPlaylistTracks([...destinationPlaylistTracks, song]);
-    setOriginPlaylistTracks(
-      originPlaylistTracks.filter(item => item.id !== song.id)
-    );
+    setLikedSongs(likedSongs.filter(item => item.id !== song.id));
     setSearchResults(searchResults.filter(item => item.id !== song.id));
 
-    await Spotify.addTrack(song.uri);
+    // await Spotify.addTrack(song.uri);
   };
 
   const removeSongFromDestination = song => {
-    setOriginPlaylistTracks([...originPlaylistTracks, song]);
+    setLikedSongs([...likedSongs, song]);
     setDestinationPlaylistTracks(
       destinationPlaylistTracks.filter(track => track.id !== song.id)
     );
@@ -95,21 +91,25 @@ const Search = ({ accessToken }) => {
         <button onClick={handleSearch}>Search</button>
       </SearchArea>
 
-      <ListsContainer>
-        <SongList
-          label="Search Results"
-          songs={searchResults}
-          shiftSong={addSongToDestination}
-          listName="searchResults"
-        />
+      {isLoading ? (
+        <div>Loading ...</div>
+      ) : (
+        <ListsContainer>
+          <SongList
+            label="Search Results"
+            songs={likedSongs}
+            shiftSong={addSongToDestination}
+            listName="searchResults"
+          />
 
-        <SongList
-          label="Playlist"
-          songs={destinationPlaylistTracks}
-          shiftSong={removeSongFromDestination}
-          listName="playlist"
-        />
-      </ListsContainer>
+          <SongList
+            label="Playlist"
+            songs={destinationPlaylistTracks}
+            shiftSong={removeSongFromDestination}
+            listName="playlist"
+          />
+        </ListsContainer>
+      )}
     </Wrapper>
   );
 };

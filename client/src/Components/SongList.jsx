@@ -6,14 +6,17 @@ const Header = styled.div`
   text-align: center;
   font-size: 20px;
 `;
+const List = styled.div`
+  width: 350px;
+`;
 
 export const SongList = ({ label, shiftSong, listName, songs }) => (
-  <div>
+  <List>
     <Header>{label}</Header>
     {songs.map((song, index) => (
       <Song key={index} song={song} shiftSong={shiftSong} listName={listName} />
     ))}
-  </div>
+  </List>
 );
 
 export default SongList;
