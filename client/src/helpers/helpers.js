@@ -1,15 +1,4 @@
-export const getMatchingTracks = (bpm, originPlaylistTracks) => {
-  if (!bpm) return originPlaylistTracks;
-
-  console.log("bpm is", bpm);
-
-  const mathcingTracks = originPlaylistTracks.filter(track => {
-    console.log(track.name, "has a tempo of", track.tempo);
-    return track.tempo > bpm - 10 && track.tempo < bpm + 10;
-  });
-
-  console.log(mathcingTracks);
-};
+import Axios from "axios";
 
 export const getUrlParams = () => {
   if (
@@ -22,4 +11,9 @@ export const getUrlParams = () => {
     };
   }
   return {};
+};
+
+export const authRedirect = async () => {
+  const url = await Axios.get("/auth");
+  window.location.href = url.data;
 };

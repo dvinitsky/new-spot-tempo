@@ -21,9 +21,7 @@ export class SpotifyService {
   //     this.destinationPlaylistId
   //   );
 
-  //   const originTrackIds = originPlaylistTracks
-  //     .map(track => track.id)
-  //     .join(",");
+  //
   //   const destinationTrackIds = destinationPlaylistTracks
   //     .map(track => track.id)
   //     .join(",");
@@ -93,21 +91,7 @@ export class SpotifyService {
     }
   };
 
-  getTempo = async trackIds => {
-    try {
-      let response = await fetch(
-        "https://api.spotify.com/v1/audio-features/?ids=" + trackIds,
-        { headers: this.headers }
-      );
-      if (response.ok) {
-        let res = await response.json();
-        return res.audio_features;
-      }
-      throw new Error("Request Failed!");
-    } catch (error) {
-      console.log(error);
-    }
-  };
+
 
   addTrack = async trackId => {
     try {

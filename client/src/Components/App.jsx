@@ -1,33 +1,44 @@
 import React, { useState, useEffect } from "react";
-import { getUrlParams } from "../helpers/helpers";
+import { getUrlParams, authRedirect } from "../helpers/helpers";
 import Search from "./Search";
 import Axios from "axios";
 
 const App = () => {
   const [accessToken, setAccessToken] = useState();
+  const [isLoading, setIsLoading] = useState();
 
   useEffect(() => {
     const loginHandler = async () => {
-      const { code, state } = getUrlParams();
-      if (code && state) {
-        const response = await Axios.post("/login", {
-          code,
-          state
-        });
-        if (response.data.mismatch) {
-          const url = await Axios.get("/auth");
-          window.location.href = url.data;
-        }
+      setIsLoading(true);
 
-        setAccessToken(response.data);
-      } else {
-        const url = await Axios.get("/auth");
-        window.location.href = url.data;
+      const { code, state } = getUrlParams();
+      try {
+        if (code && state) {
+          const response = await Axios.post("/login", {
+            code,
+            state
+          });
+          if (response.data.mismatch) {
+            return await authRedirect();
+          }
+
+          setAccessToken(response.data);
+        } else {
+          await authRedirect();
+        }
+      } catch (error) {
+        await authRedirect();
       }
+
+      setIsLoading(false);
     };
 
     loginHandler();
   }, []);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return accessToken ? <Search /> : null;
 };

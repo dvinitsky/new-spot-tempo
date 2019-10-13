@@ -43,8 +43,11 @@ const Search = () => {
   useEffect(() => {
     const getLikedSongs = async () => {
       setIsLoading(true);
-      await Axios.get("/likedSongs", {});
-      const firstBatch = await Axios.post("/getSongs", { limit: 100 });
+
+      const firstBatch = await Axios.post("/getNextSongs", {
+        start: 0,
+        end: 100
+      });
       setLikedSongs(firstBatch.data);
       setIsLoading(false);
     };
@@ -52,10 +55,19 @@ const Search = () => {
     getLikedSongs();
   }, []);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     const newBpm = document.getElementById("searchbar").value;
+
+    const matchingTracks = await Axios.post("/getMatchingSongs", {
+      bpm: newBpm,
+      start: 0,
+      end: 100
+    });
+
+    console.log(matchingTracks);
+
     setBpm(newBpm);
-    setSearchResults(getMatchingTracks(newBpm, likedSongs));
+    // setSearchResults(getMatchingTracks(newBpm, likedSongs));
   };
 
   const addSongToDestination = async song => {
@@ -92,7 +104,7 @@ const Search = () => {
       </SearchArea>
 
       {isLoading ? (
-        <div>Loading ...</div>
+        <div>Loading...</div>
       ) : (
         <ListsContainer>
           <SongList
