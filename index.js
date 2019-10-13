@@ -35,6 +35,10 @@ app.use(bodyParser.json());
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, "client/build")));
 
+app.get("/getAccessToken", (req, res) => {
+  return res.status(200).send(accessToken);
+});
+
 app.get("/auth", (req, res) => {
   res.status(200).send(
     "https://accounts.spotify.com/authorize?" +

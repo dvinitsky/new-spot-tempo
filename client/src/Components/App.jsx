@@ -11,6 +11,14 @@ const App = () => {
     const loginHandler = async () => {
       setIsLoading(true);
 
+      const response = await Axios.get("/getAccessToken");
+
+      if (response.data) {
+        setAccessToken(response.data);
+        setIsLoading(false);
+        return;
+      }
+
       const { code, state } = getUrlParams();
       try {
         if (code && state) {
