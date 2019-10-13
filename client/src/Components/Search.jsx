@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SongList } from "./SongList";
 import styled from "styled-components";
-import { getMatchingTracks } from "../helpers/helpers";
 import Axios from "axios";
 
 const Wrapper = styled.div`
@@ -48,7 +47,9 @@ const Search = () => {
         start: 0,
         end: 100
       });
+
       setLikedSongs(firstBatch.data);
+      setSearchResults(firstBatch.data);
       setIsLoading(false);
     };
 
@@ -64,10 +65,8 @@ const Search = () => {
       end: 100
     });
 
-    console.log(matchingTracks);
-
     setBpm(newBpm);
-    // setSearchResults(getMatchingTracks(newBpm, likedSongs));
+    setSearchResults(matchingTracks.data);
   };
 
   const addSongToDestination = async song => {
@@ -99,7 +98,15 @@ const Search = () => {
       </HeaderText>
 
       <SearchArea>
-        <SearchBar id="searchbar" type="text" />
+        <SearchBar
+          id="searchbar"
+          type="text"
+          onKeyDown={e => {
+            if (e.keyCode === 13) {
+              handleSearch();
+            }
+          }}
+        />
         <button onClick={handleSearch}>Search</button>
       </SearchArea>
 
@@ -109,7 +116,7 @@ const Search = () => {
         <ListsContainer>
           <SongList
             label="Search Results"
-            songs={likedSongs}
+            songs={searchResults}
             shiftSong={addSongToDestination}
             listName="searchResults"
           />

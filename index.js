@@ -2,7 +2,6 @@ const express = require("express");
 const path = require("path");
 const PORT = process.env.PORT || 5000;
 const bodyParser = require("body-parser");
-const { getMatchingTracks } = require("./helpers/helpers");
 const axios = require("axios");
 const qs = require("querystring");
 
@@ -98,7 +97,11 @@ app.post("/getNextSongs", (req, res) => {
 });
 
 app.post("/getMatchingSongs", (req, res) => {
-  const matchingTracks = getMatchingTracks(req.body.bpm, likedSongs);
+  const matchingTracks = likedSongs.filter(
+    track =>
+      track.tempo > Number(req.body.bpm) - 10 &&
+      track.tempo < Number(req.body.bpm) + 10
+  );
 
   return res
     .status(200)
