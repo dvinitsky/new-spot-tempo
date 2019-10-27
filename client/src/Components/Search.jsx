@@ -84,7 +84,7 @@ const Search = () => {
     );
 
     const bpm = document.getElementById("searchbar").value;
-    if (song.tempo > bpm - 10 && song.tempo < bpm + 10) {
+    if (song.tempo > bpm - 5 && song.tempo < bpm + 5) {
       setSearchResults([...searchResults, song]);
     }
   };

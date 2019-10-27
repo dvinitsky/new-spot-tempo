@@ -25,8 +25,11 @@ const generateRandomString = length => {
 
 const randomString = generateRandomString(16);
 let accessToken;
-let likedSongs = [];
+let originSongs = [];
+let destinationSongs = [];
 let headers;
+let playlists;
+let userId;
 
 const app = express();
 app.use(bodyParser.json());
@@ -84,7 +87,13 @@ app.post("/login", async (req, res) => {
     refreshToken = response.data.refresh_token;
     headers = { Authorization: `Bearer ${accessToken}` };
 
-    await getLikedSongs();
+    await getPlaylistsAndUserData();
+
+    const originId = await getPlaylistId("SpotTempo");
+    const destinationId = await getPlaylistId("SpotTempo Workout");
+
+    await getPlaylistTracks(originId, originSongs);
+    await getPlaylistTracks(destinationId, destinationSongs);
 
     return res.status(200).send(accessToken);
   } catch (error) {
@@ -93,85 +102,19 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/getNextSongs", (req, res) => {
-  return res.status(200).send(likedSongs.slice(req.body.start, req.body.end));
+  return res.status(200).send(originSongs.slice(req.body.start, req.body.end));
 });
 
 app.post("/getMatchingSongs", (req, res) => {
-  const matchingTracks = likedSongs.filter(
+  const matchingTracks = originSongs.filter(
     track =>
-      track.tempo > Number(req.body.bpm) - 10 &&
-      track.tempo < Number(req.body.bpm) + 10
+      track.tempo > Number(req.body.bpm) - 5 &&
+      track.tempo < Number(req.body.bpm) + 5
   );
 
   return res
     .status(200)
     .send(matchingTracks.slice(req.body.start, req.body.end));
-});
-
-const getLikedSongs = async () => {
-  try {
-    const response = await axios.get(
-      "https://api.spotify.com/v1/me/tracks?limit=50",
-      { headers }
-    );
-
-    likedSongs.push(...response.data.items.map(item => item.track));
-    total = response.data.total;
-
-    let promises = [];
-    for (let i = 50; i <= total; i += 50) {
-      promises.push(
-        axios.get(`https://api.spotify.com/v1/me/tracks?limit=50&offset=${i}`, {
-          headers
-        })
-      );
-    }
-
-    let promisesResponse;
-    promisesResponse = await Promise.all(promises);
-
-    promisesResponse.forEach(response => {
-      likedSongs.push(...response.data.items.map(item => item.track));
-    });
-
-    for (let j = 0; j <= total + 100; j += 100) {
-      let audioFeatures;
-      const response = await axios.get(
-        `https://api.spotify.com/v1/audio-features/?ids=${likedSongs
-          .slice(j, j + 100)
-          .map(track => track.id)
-          .join(",")}`,
-        { headers }
-      );
-      audioFeatures = response.data.audio_features;
-
-      audioFeatures.forEach((audioFeature, index) => {
-        if (audioFeature && audioFeature.tempo) {
-          likedSongs[j + index].tempo = Math.round(audioFeature.tempo);
-        }
-      });
-    }
-  } catch (error) {
-    return { error };
-  }
-};
-
-app.get("/playlists", async (req, res) => {
-  let userData, playlists;
-  try {
-    const userResponse = await axios.get("https://api.spotify.com/v1/me", {
-      headers
-    });
-    const playlistsResponse = await axios.get(
-      "https://api.spotify.com/v1/me/playlists",
-      { headers }
-    );
-
-    userData = userResponse.data;
-    playlists = playlistsResponse.data;
-  } catch (error) {
-    return res.status(500).send("There has been an error.");
-  }
 });
 
 // The "catchall" handler: for any request that doesn't
@@ -181,3 +124,121 @@ app.get("*", (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+
+////////////////////
+// HELPERS
+
+const getPlaylistsAndUserData = async () => {
+  try {
+    const playlistsResponse = await axios.get(
+      "https://api.spotify.com/v1/me/playlists",
+      { headers }
+    );
+    const userResponse = await axios.get("https://api.spotify.com/v1/me", {
+      headers
+    });
+
+    playlists = playlistsResponse.data.items;
+    userId = userResponse.data.id;
+  } catch (error) {
+    return res.status(500).send("There has been an error.");
+  }
+};
+
+// Creates the playlist if it doesn't exist, and returns its ID.
+const getPlaylistId = async playlistName => {
+  const playlist = playlists.find(playlist => playlist.name === playlistName);
+  return playlist ? playlist.id : await createPlaylist(playlistName);
+};
+
+const createPlaylist = async playlistName => {
+  try {
+    let response = await axios.post(
+      `https://api.spotify.com/v1/users/${userId}/playlists`,
+      {
+        name: playlistName
+      },
+      {
+        headers
+      }
+    );
+
+    let playlist = await response.json();
+    return playlist.id;
+  } catch (error) {
+    console.log(error);
+  }
+};
+const getPlaylistTracks = async (playlistId, songs) => {
+  console.log("in getPlaylistTracks for id", playlistId);
+  try {
+    // Get the first 100 tracks and the total number of tracks
+    let response = await axios.get(
+      `https://api.spotify.com/v1/users/${userId}/playlists/${playlistId}/tracks?limit=100`,
+      { headers }
+    );
+
+    songs.push(...response.data.items.map(item => item.track));
+    const total = response.data.total;
+
+    // Get the rest of the tracks
+    let promises = [];
+    for (let i = 100; i <= total; i += 100) {
+      promises.push(
+        axios.get(
+          `https://api.spotify.com/v1/users/${userId}/playlists/${playlistId}/tracks?limit=100&offset=${i}`,
+          {
+            headers
+          }
+        )
+      );
+    }
+
+    let promisesResponse;
+    promisesResponse = await Promise.all(promises);
+
+    promisesResponse.forEach(response => {
+      songs.push(...response.data.items.map(item => item.track));
+    });
+
+    for (let j = 0; j <= total + 100; j += 100) {
+      let audioFeatures;
+      const response = await axios.get(
+        `https://api.spotify.com/v1/audio-features/?ids=${songs
+          .slice(j, j + 100)
+          .map(track => track.id)
+          .join(",")}`,
+        { headers }
+      );
+      audioFeatures = response.data.audio_features;
+
+      audioFeatures.forEach((audioFeature, index) => {
+        if (audioFeature && audioFeature.tempo) {
+          songs[j + index].tempo = Math.round(audioFeature.tempo);
+        }
+      });
+    }
+  } catch (error) {
+    return { error };
+  }
+};
+
+const addTrack = async trackId => {
+  try {
+    let url =
+      "https://api.spotify.com/v1/users/" +
+      this.userId +
+      "/playlists/" +
+      this.destinationPlaylistId +
+      "/tracks?uris=" +
+      trackId;
+    let response = await axios.post(url, {}, { headers });
+    if (response.ok) {
+      let res = await response.json();
+      return res;
+    }
+    throw new Error("Request Failed!");
+  } catch (error) {
+    console.log(error);
+  }
+};
