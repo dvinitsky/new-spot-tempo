@@ -30,6 +30,8 @@ let destinationSongs = [];
 let headers;
 let playlists;
 let userId;
+let destinationPlaylistId;
+let originPlaylistId;
 
 const app = express();
 app.use(bodyParser.json());
@@ -87,13 +89,7 @@ app.post("/login", async (req, res) => {
     refreshToken = response.data.refresh_token;
     headers = { Authorization: `Bearer ${accessToken}` };
 
-    await getPlaylistsAndUserData();
-
-    const originId = await getPlaylistId("SpotTempo");
-    const destinationId = await getPlaylistId("SpotTempo Workout");
-
-    await getPlaylistTracks(originId, originSongs);
-    await getPlaylistTracks(destinationId, destinationSongs);
+    await refreshData();
 
     return res.status(200).send(accessToken);
   } catch (error) {
@@ -101,8 +97,16 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/getNextSongs", (req, res) => {
+app.post("/getNextOriginSongs", async (req, res) => {
+  await refreshData();
   return res.status(200).send(originSongs.slice(req.body.start, req.body.end));
+});
+
+app.post("/getNextDestinationSongs", async (req, res) => {
+  await refreshData();
+  return res
+    .status(200)
+    .send(destinationSongs.slice(req.body.start, req.body.end));
 });
 
 app.post("/getMatchingSongs", (req, res) => {
@@ -117,6 +121,39 @@ app.post("/getMatchingSongs", (req, res) => {
     .send(matchingTracks.slice(req.body.start, req.body.end));
 });
 
+app.post("/addTrack", async (req, res) => {
+  try {
+    await axios.post(
+      `https://api.spotify.com/v1/playlists/${destinationPlaylistId}/tracks`,
+      { uris: [req.body.trackId] },
+      { headers }
+    );
+
+    res.status(200).send();
+    await refreshData();
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.post("/removeTrack", async (req, res) => {
+  try {
+    await axios({
+      url: `https://api.spotify.com/v1/playlists/${destinationPlaylistId}/tracks`,
+      method: "DELETE",
+      headers,
+      data: {
+        tracks: [{ uri: req.body.trackId, positions: [req.body.position] }]
+      }
+    });
+
+    res.status(200).send();
+    await refreshData();
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get("*", (req, res) => {
@@ -127,6 +164,19 @@ app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
 ////////////////////
 // HELPERS
+
+const refreshData = async () => {
+  await getPlaylistsAndUserData();
+
+  originPlaylistId = await getPlaylistId("SpotTempo");
+  destinationPlaylistId = await getPlaylistId("SpotTempo Workout");
+
+  originSongs = [];
+  destinationSongs = [];
+
+  await getPlaylistTracks(originPlaylistId, originSongs);
+  await getPlaylistTracks(destinationPlaylistId, destinationSongs);
+};
 
 const getPlaylistsAndUserData = async () => {
   try {
@@ -170,7 +220,6 @@ const createPlaylist = async playlistName => {
   }
 };
 const getPlaylistTracks = async (playlistId, songs) => {
-  console.log("in getPlaylistTracks for id", playlistId);
   try {
     // Get the first 100 tracks and the total number of tracks
     let response = await axios.get(
@@ -220,25 +269,5 @@ const getPlaylistTracks = async (playlistId, songs) => {
     }
   } catch (error) {
     return { error };
-  }
-};
-
-const addTrack = async trackId => {
-  try {
-    let url =
-      "https://api.spotify.com/v1/users/" +
-      this.userId +
-      "/playlists/" +
-      this.destinationPlaylistId +
-      "/tracks?uris=" +
-      trackId;
-    let response = await axios.post(url, {}, { headers });
-    if (response.ok) {
-      let res = await response.json();
-      return res;
-    }
-    throw new Error("Request Failed!");
-  } catch (error) {
-    console.log(error);
   }
 };

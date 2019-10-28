@@ -31,29 +31,34 @@ const ListsContainer = styled.div`
 `;
 
 const Search = () => {
-  const [likedSongs, setLikedSongs] = useState([]);
-  const [destinationPlaylistTracks, setDestinationPlaylistTracks] = useState(
-    []
-  );
-  const [searchResults, setSearchResults] = useState([]);
+  const [destinationSongs, setDestinationSongs] = useState([]);
+  const [originSearchResults, setOriginSearchResults] = useState([]);
   const [bpm, setBpm] = useState();
   const [isLoading, setIsLoading] = useState();
 
   useEffect(() => {
-    const getLikedSongs = async () => {
+    const getInitialSongs = async () => {
       setIsLoading(true);
 
-      const firstBatch = await Axios.post("/getNextSongs", {
+      const firstOriginBatch = await Axios.post("/getNextOriginSongs", {
         start: 0,
         end: 100
       });
+      const firstDestinationBatch = await Axios.post(
+        "/getNextDestinationSongs",
+        {
+          start: 0,
+          end: 100
+        }
+      );
 
-      setLikedSongs(firstBatch.data);
-      setSearchResults(firstBatch.data);
+      setOriginSearchResults(firstOriginBatch.data);
+      setDestinationSongs(firstDestinationBatch.data);
+
       setIsLoading(false);
     };
 
-    getLikedSongs();
+    getInitialSongs();
   }, []);
 
   const handleSearch = async () => {
@@ -66,26 +71,40 @@ const Search = () => {
     });
 
     setBpm(newBpm);
-    setSearchResults(matchingTracks.data);
+    setOriginSearchResults(matchingTracks.data);
   };
 
   const addSongToDestination = async song => {
-    setDestinationPlaylistTracks([...destinationPlaylistTracks, song]);
-    setLikedSongs(likedSongs.filter(item => item.id !== song.id));
-    setSearchResults(searchResults.filter(item => item.id !== song.id));
-
-    // await Spotify.addTrack(song.uri);
+    try {
+      await Axios.post("/addTrack", {
+        trackId: song.uri
+      });
+      setDestinationSongs([...destinationSongs, song]);
+      setOriginSearchResults(
+        originSearchResults.filter(item => item.id !== song.id)
+      );
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const removeSongFromDestination = song => {
-    setLikedSongs([...likedSongs, song]);
-    setDestinationPlaylistTracks(
-      destinationPlaylistTracks.filter(track => track.id !== song.id)
-    );
+  const removeSongFromDestination = async (song, position) => {
+    try {
+      await Axios.post("/removeTrack", {
+        trackId: song.uri,
+        position
+      });
 
-    const bpm = document.getElementById("searchbar").value;
-    if (song.tempo > bpm - 5 && song.tempo < bpm + 5) {
-      setSearchResults([...searchResults, song]);
+      setDestinationSongs(
+        destinationSongs.filter(
+          (track, index) => track.id !== song.id && index !== position
+        )
+      );
+      if (song.tempo > bpm - 5 && song.tempo < bpm + 5) {
+        setOriginSearchResults([...originSearchResults, song]);
+      }
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -115,15 +134,15 @@ const Search = () => {
       ) : (
         <ListsContainer>
           <SongList
-            label="Search Results"
-            songs={searchResults}
+            label="Search Results from SpotTempo playlist (limit 100)"
+            songs={originSearchResults}
             shiftSong={addSongToDestination}
             listName="searchResults"
           />
 
           <SongList
-            label="Playlist"
-            songs={destinationPlaylistTracks}
+            label="SpotTempo Workout playlist"
+            songs={destinationSongs}
             shiftSong={removeSongFromDestination}
             listName="playlist"
           />

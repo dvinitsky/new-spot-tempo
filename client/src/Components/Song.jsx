@@ -28,8 +28,8 @@ const Bpm = styled.div`
   width: 35px;
 `;
 
-export const Song = ({ listName, shiftSong, song }) => (
-  <SongItem listName={listName} onClick={() => shiftSong(song)}>
+export const Song = ({ listName, shiftSong, song, index }) => (
+  <SongItem listName={listName} onClick={() => shiftSong(song, index)}>
     <AddRemove>{listName === "searchResults" ? "+" : "-"}</AddRemove>
 
     <SongInfo>

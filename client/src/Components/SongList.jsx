@@ -14,7 +14,13 @@ export const SongList = ({ label, shiftSong, listName, songs }) => (
   <List>
     <Header>{label}</Header>
     {songs.map((song, index) => (
-      <Song key={index} song={song} shiftSong={shiftSong} listName={listName} />
+      <Song
+        key={index}
+        song={song}
+        shiftSong={shiftSong}
+        listName={listName}
+        index={index}
+      />
     ))}
   </List>
 );
